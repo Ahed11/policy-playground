@@ -1,0 +1,29 @@
+scenario_id: scenario_001
+name: External client data send
+users:
+- user_id: user_001
+  department: sales
+  role: manager
+events:
+- event_id: evt_001
+  time: "10:00"
+  user_id: user_001
+  action: open_file
+  object_type: file
+  file_name: client_base.xlsx
+  file_ext: xlsx
+  content_classes: [client_data, personal_data]
+  channel: local
+  destination_type: none
+  size_bytes: 204800
+- event_id: evt_002
+  time: "10:05"
+  user_id: user_001
+  action: email_send
+  object_type: file
+  file_name: client_base.xlsx
+  file_ext: xlsx
+  content_classes: [client_data, personal_data]
+  channel: email
+  destination_type: external
+  size_bytes: 204800
