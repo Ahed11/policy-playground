@@ -1,8 +1,4 @@
-package internal
-
-import (
-	"gopkg.in/yaml.v2"
-)
+package policy
 
 type Policies struct {
 	Policies []Policy `yaml:"policies"`
