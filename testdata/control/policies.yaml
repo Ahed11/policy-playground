@@ -4,10 +4,10 @@ policies:
   severity: high
   description: Detects sending client data to external destination
   condition:
-  all:
-  - field: action
-    equals: email_send
-  - field: destination_type
-    equals: external
-  - field: content_classes
-    contains: client_data
+    all:
+    - field: action
+      equals: email_send
+    - field: destination_type
+      equals: external
+    - field: content_classes
+      contains: client_data
