@@ -1,0 +1,13 @@
+package internal
+
+import (
+	"gopkg.in/yaml.v2"
+)
+
+type Condition struct {
+	Field string `yaml:"field"`
+	Equals string `yaml:"equals"`
+	In []string `yaml:"in"`
+	Contains string `yaml:"contains"`
+	All []Condition `yaml:"all"`
+}
