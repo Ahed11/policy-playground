@@ -14,6 +14,7 @@ type RunConfig struct {
 }
 
 func main() {
+
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "Usage: policy-playground <command> [options]")
 		os.Exit(1)
