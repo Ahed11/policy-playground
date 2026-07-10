@@ -1,19 +1,15 @@
-package internal
-
-import (
-	"gopkg.in/yaml.v2"
-)
+package policy
 
 type Event struct {
-	Event_id string `yaml:"event_id"`
+	EventID string `yaml:"event_id"`
 	Time string `yaml:"time"`
-	User_id string `yaml:"user_id"`
+	UserID string `yaml:"user_id"`
 	Action string `yaml:"action"`
-	Object_type string `yaml:"object_type"`
-	File_name string `yaml:"file_name"`
-	File_ext string `yaml:"file_ext"`
-	Content_classes []string `yaml:"content_classes"`
+	ObjectType string `yaml:"object_type"`
+	FileName string `yaml:"file_name"`
+	FileExt string `yaml:"file_ext"`
+	ContentClasses []string `yaml:"content_classes"`
 	Channel string `yaml:"channel"`
-	Destination_type string `yaml:"destination_type"`
-	Size_bytes int `yaml:"size_bytes"`
+	DestinationType string `yaml:"destination_type"`
+	SizeBytes int `yaml:"size_bytes"`
 }

@@ -1,11 +1,7 @@
-package internal
-
-import (
-	"gopkg.in/yaml.v2"
-)
+package policy
 
 type User struct {
-	User_id string `yaml:"user_id"`
+	UserID string `yaml:"user_id"`
 	Department string `yaml:"department"`
 	Role string `yaml:"role"`
 }
