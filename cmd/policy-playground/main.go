@@ -1,15 +1,15 @@
 package main
 
 import (
+	"github.com/Ahed11/policy-playground/internal"
 	"flag"
 	"fmt"
-	//"log"
 	"os"
 )
 
 type RunConfig struct {
 	ScenarioPath string
-	PoliciesPath	string
+	PoliciesPath string
 	OutPath	string
 }
 
@@ -38,10 +38,10 @@ func runCmd(args []string) error {
 	var cfg RunConfig
 
 	fs.StringVar(&cfg.ScenarioPath, "scenario", "", "path to scenario yaml file")
-	fs.StringVar(&cfg.PoliciesPath, "polices", "", "path to polices yaml file")
-	fs.StringVar(&cfg.OutPath, "out", "alets.jsonl", "path to scenario yaml file")
+	fs.StringVar(&cfg.PoliciesPath, "policies", "", "path to policies yaml file")
+	fs.StringVar(&cfg.OutPath, "out", "alerts.jsonl", "path to alerts JSONL file")
 
-	if err := fs.Parse(args [2:]); err != nil {
+	if err := fs.Parse(args); err != nil {
 		return err
 	}	
 
@@ -50,18 +50,29 @@ func runCmd(args []string) error {
 	}
 
 	if cfg.PoliciesPath == "" {
-		return fmt.Errorf("--polices is required")
+		return fmt.Errorf("--policies is required")
 	}
 
 	return run(cfg) 
 }
 
 func run(cfg RunConfig) error {
-	fmt.Println("scenario:", cfg.ScenarioPath)
-	fmt.Println("policies:", cfg.PoliciesPath)
-	fmt.Println("out:", cfg.OutPath)
+	scenario, err := policy.ReadScenarioYAML(cfg.ScenarioPath)
+	
+	if err != nil {
+		return err
+	}
 
-	//дальше надо будет прописать чтение параметров(сценария, политик) и запуск симуляции. После попытаться написать alerts.jsonl
+	policies, err := policy.ReadPoliciesYAML(cfg.PoliciesPath)
+	
+	if err != nil {
+		return err
+	}
+
+	events := len(scenario.Events)
+	CountOfpolicies := len(policies.Policies)
+
+	fmt.Printf(" Количество событий %v\n Количество политик %v\n", events, CountOfpolicies)
 
 	return nil
 }
