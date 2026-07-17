@@ -8,44 +8,27 @@ func CreateAlert(policy Policy, event Event) (alert Alert, created bool, err err
 	localReasons := []string{}
 	
 	if policy.Condition.Field == "" && policy.Condition.All == nil {
-		return alert, false, fmt.Errorf("нет ни просто условия ни составного")
+		return alert, false, fmt.Errorf("нет ни простого, ни составного условия")
 	}
-
-	if policy.Condition.Field != "" && policy.Condition.Equals == "" {
-		return alert, false, fmt.Errorf("указано поле, но нет поддерживаемого оператора")
-	}
-
+	
 	if policy.Condition.Field != "" && policy.Condition.All != nil {
-		return alert, false, fmt.Errorf("одновременно заполнены простое и составное условие")
+		return alert, false, fmt.Errorf("одновременно заполнены простое и all")
 	}
 
 	if policy.Condition.All != nil && len(policy.Condition.All) == 0 {
-			return alert, false, fmt.Errorf("составное условие существует но содержит все пустые условия")
-	} 
+			return alert, false, fmt.Errorf("группа all существует, но не содержит элементов")
+	}
 
-	// if policy.Condition.All != nil && len(policy.Condition.All) != 0 {
-	// 	for i := range policy.Condition.All {
-	// 		if policy.Condition.All[i].Field == "" {
-	// 			if policy.Condition.All[i].Equals == "" {
-	// 				return alert, false, fmt.Errorf("составное условие существует но содержит пустое/ые условие/я")
-	// 			} else {
-	// 				return alert, false, fmt.Errorf("составное условие существует но содержит пустое/ые условие/я")
-	// 			}
-	// 		}
-	// 	}
-	// }
-
-	if policy.Condition.Field != "" {
-		if policy.Condition.Equals != "" {
-			result, reason, err := CheckIfEquals(event, policy.Condition)
-			if err != nil {
-				return alert, false, fmt.Errorf("политика %v: %w", policy.PolicyID, err)
-			}
-			if result == true{
-				localReasons = append(localReasons, reason)
-			} else {
-				return alert, false, nil
-			}
+	if policy.Condition.Field != "" && policy.Condition.Equals != "" {
+		result, reason, err := CheckIfEquals(event, policy.Condition)
+		
+		if err != nil {
+			return alert, false, fmt.Errorf("политика %v: %w", policy.PolicyID, err)
+		}
+		if result == true{
+			localReasons = append(localReasons, reason)
+		} else {
+			return alert, false, nil
 		}
 	} else if policy.Condition.All != nil {
 		result, reasons, err := AllConditions(event, policy.Condition)
@@ -61,6 +44,8 @@ func CreateAlert(policy Policy, event Event) (alert Alert, created bool, err err
 		} else {
 			return alert, false, nil
 		}
+	} else {
+		return alert, false, fmt.Errorf("политика %v: у простого условия отсутствует поддерживаемый оператор", policy.PolicyID)
 	}
 
 	alert = Alert{
