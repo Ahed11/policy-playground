@@ -1,0 +1,11 @@
+policies:
+- policy_id: pol_external_client_data
+  name: Client data to external channel
+  severity: high
+  description: Detects sending client data to external destination
+  condition:
+    all:
+    - field: action
+      equals: email_send
+    - field: destination_type
+      equals: external
