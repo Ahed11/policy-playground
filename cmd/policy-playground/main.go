@@ -1,16 +1,19 @@
 package main
 
 import (
-	"github.com/Ahed11/policy-playground/internal"
 	"flag"
 	"fmt"
 	"os"
 )
 
+import (
+	"github.com/Ahed11/policy-playground/internal"
+)
+
 type RunConfig struct {
 	ScenarioPath string
 	PoliciesPath string
-	OutPath	string
+	OutPath      string
 }
 
 func main() {
@@ -43,7 +46,7 @@ func runCmd(args []string) error {
 
 	if err := fs.Parse(args); err != nil {
 		return err
-	}	
+	}
 
 	if cfg.ScenarioPath == "" {
 		return fmt.Errorf("--scenario is required")
@@ -53,26 +56,47 @@ func runCmd(args []string) error {
 		return fmt.Errorf("--policies is required")
 	}
 
-	return run(cfg) 
+	return run(cfg)
 }
 
 func run(cfg RunConfig) error {
 	scenario, err := policy.ReadScenarioYAML(cfg.ScenarioPath)
-	
+
 	if err != nil {
 		return err
 	}
 
 	policies, err := policy.ReadPoliciesYAML(cfg.PoliciesPath)
-	
+
 	if err != nil {
 		return err
 	}
 
-	events := len(scenario.Events)
-	CountOfpolicies := len(policies.Policies)
+	alertFile, err := os.OpenFile(cfg.OutPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 
-	fmt.Printf(" Количество событий %v\n Количество политик %v\n", events, CountOfpolicies)
+	if err != nil {
+		return err
+	}
+
+	defer alertFile.Close()
+
+	for x := range scenario.Events {
+		for y := range policies.Policies {
+			alert, created, err := policy.CreateAlert(policies.Policies[y], scenario.Events[x])
+
+			if err != nil {
+				return fmt.Errorf("событие: %v, политика: %v\n%w", scenario.Events[x].EventID, policies.Policies[y].PolicyID, err)
+			}
+
+			if created == false {
+				continue
+			}
+
+			if err := policy.WriteAlert(alertFile, alert); err != nil {
+				return err
+			}
+		}
+	}
 
 	return nil
 }
