@@ -2,7 +2,7 @@ package policy
 
 import "testing"
 
-//Везде где идет разделение проверки функции на событие 1 и 2, для события 1 она должна возвращать результат false , а 2 возвращать true.  
+//Везде где идет разделение проверки функции на событие 1 и 2, для события 1 она должна возвращать результат false , а 2 возвращать true.
 
 func TestCheckIfEquals_FieldIsEmptyInEvent(t *testing.T) {
 	var event Event = Event{
@@ -150,6 +150,62 @@ func TestCheckIfEquals_DestinationTypeInEvent2(t *testing.T) {
 	}
 }
 
+func TestIfContainsEvent1(t *testing.T) {
+	var event_001 Event = Event{
+		ContentClasses: []string{
+			"client_data",
+			"personal_data",
+		},
+	}
+
+	var condition Condition = Condition{
+		Field: "content_classes",
+		Contains: "personal_data",
+	}
+
+	result, reason, err := CheckifContains(event_001, condition)
+
+	if err != nil {
+		t.Fatalf("ошибка: %v", err)
+	}
+
+	if result != true {
+		t.Errorf("ожидался true, получен %v", result)
+	}
+
+	if expectedReason := "content_classes contains personal_data"; reason != expectedReason {
+		t.Errorf("Ожидалась причина %q, получена %q", expectedReason, reason)
+	}
+}
+
+func TestIfContainsEvent2(t *testing.T) {
+	var event_002 Event = Event{
+		ContentClasses: []string{
+			"client_data",
+			"none",
+		},
+	}
+
+	var condition Condition = Condition{
+		Field: "content_classes",
+		Contains: "personal_data",
+	}
+
+	result, reason, err := CheckifContains(event_002, condition)
+
+	if err != nil {
+		t.Fatalf("ошибка: %v", err)
+	}
+
+	if result != false {
+		t.Errorf("ожидался false, получен %v", result)
+	}
+
+	if expectedReason := ""; reason != expectedReason {
+		t.Errorf("Ожидалась причина %q, получена %q", expectedReason, reason)
+	}
+}
+
 func TestAllConditionsEvent1(t *testing.T) {
 	
 	var event Event = Event{
@@ -171,7 +227,7 @@ func TestAllConditionsEvent1(t *testing.T) {
 	}
 
 	if result != false {
-		t.Errorf("ожидется false, получен %v", result)
+		t.Errorf("ожидался false, получен %v", result)
 	}
 
 	if len(reasons) != 0 {
