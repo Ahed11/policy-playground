@@ -13,12 +13,33 @@ func CheckIfEquals(event Event, condition Condition) (result bool, reason string
 	}
 	switch condition.Field {
 	case "action":
+		if condition.Equals == "" {
+			return false, "", fmt.Errorf("нет значения для equals")
+		}
 		if condition.Equals == event.Action {
 			return true, fmt.Sprintf("action equals %s", event.Action), nil
 		}
 	case "destination_type":
 		if condition.Equals == event.DestinationType {
 			return true, fmt.Sprintf("destination_type equals %s", event.DestinationType), nil
+		}
+	}
+	return false, "", nil
+}
+
+func CheckifContains(event Event, condition Condition) (result bool, reason string, err error) {
+	if condition.Field == "" {
+		return false, "", fmt.Errorf("поле пусто")
+	}
+	if condition.Field != "content_classes" {
+		return false, "", fmt.Errorf("поле не поддерживается")
+	}
+	if condition.Contains == "" {
+		return false, "", fmt.Errorf("нет значения для contains")
+	}
+	for i := range event.ContentClasses {
+		if condition.Contains == event.ContentClasses[i] {
+			return true, fmt.Sprintf("content_classes contains %s", event.ContentClasses[i]), nil
 		}
 	}
 	return false, "", nil
