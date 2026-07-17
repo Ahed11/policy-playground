@@ -297,11 +297,17 @@ function Add-StandardEngineeringAssessments {
     if ($Ctx.CommandResults.ContainsKey('go_test_all')) {
         Add-CommandFeatureAssessment -Ctx $Ctx -Id 'engineering.go_test_passes' -Level 'engineering' -Category 'tests' -Requirement 'go test ./... passes' -CommandName 'go_test_all'
     }
-    if ($Ctx.CommandResults.ContainsKey('go_test_bench')) {
-        Add-CommandFeatureAssessment -Ctx $Ctx -Id 'engineering.benchmarks_run' -Level 'engineering' -Category 'benchmarks' -Requirement 'Benchmark tests run' -CommandName 'go_test_bench'
-    }
     if ($Ctx.CommandResults.ContainsKey('go_test_race')) {
         Add-CommandFeatureAssessment -Ctx $Ctx -Id 'engineering.race_test_passes' -Level 'engineering' -Category 'tests' -Requirement 'go test -race ./... passes' -CommandName 'go_test_race'
+    }
+    if ($Ctx.CommandResults.ContainsKey('make_test')) {
+        Add-CommandFeatureAssessment -Ctx $Ctx -Id 'engineering.make_test_runs' -Level 'engineering' -Category 'reproducibility' -Requirement 'make test passes' -CommandName 'make_test'
+    }
+    if ($Ctx.CommandResults.ContainsKey('make_bench')) {
+        Add-CommandFeatureAssessment -Ctx $Ctx -Id 'engineering.make_bench_runs' -Level 'engineering' -Category 'reproducibility' -Requirement 'make bench passes' -CommandName 'make_bench'
+    }
+    if ($Ctx.CommandResults.ContainsKey('make_demo')) {
+        Add-CommandFeatureAssessment -Ctx $Ctx -Id 'engineering.make_demo_runs' -Level 'engineering' -Category 'reproducibility' -Requirement 'make demo passes' -CommandName 'make_demo'
     }
 
     $readmePath = Join-Path $Ctx.RepoRoot 'README.md'
@@ -465,6 +471,8 @@ policies:
           equals: email_send
         - field: destination_type
           equals: external
+        - field: file_ext
+          in: [xlsx, docx, pdf]
         - field: content_classes
           contains: client_data
   - policy_id: pol_print_pdf
@@ -477,7 +485,6 @@ policies:
 '@
 
 Invoke-CheckCommand -Ctx $ctx -Name 'go_test_all' -Command "& '$($ctx.GoCmd)' test ./..."
-Invoke-CheckCommand -Ctx $ctx -Name 'go_test_bench' -Command "& '$($ctx.GoCmd)' test -bench=. ./..."
 
 if (Test-Path -LiteralPath (Join-Path $ctx.RepoRoot 'Makefile')) {
     Invoke-CheckCommand -Ctx $ctx -Name 'make_test' -Command 'make test'
@@ -507,7 +514,7 @@ Add-CommandFeatureAssessment -Ctx $ctx -Id 'minimum.read_policies' -Level 'minim
 Add-SourceFeatureAssessment -Ctx $ctx -Id 'minimum.conditions' -Level 'minimum' -Category 'algorithm' -Requirement 'equals in contains conditions' -Patterns @('equals|Equals','contains|Contains','\bin\b|In') -Match 'all'
 Add-SourceFeatureAssessment -Ctx $ctx -Id 'minimum.all_group' -Level 'minimum' -Category 'algorithm' -Requirement 'all logical group' -Patterns @('all|AllConditions') -Match 'any'
 Add-CommandFeatureAssessment -Ctx $ctx -Id 'minimum.alerts_jsonl' -Level 'minimum' -Category 'format' -Requirement 'JSONL alerts with reasons' -CommandName 'cli_run_alerts' -RequiredArtifacts @($alerts)
-Add-SourceFeatureAssessment -Ctx $ctx -Id 'minimum.condition_tests' -Level 'minimum' -Category 'tests' -Requirement 'Condition unit tests exist' -Patterns @('Test.*Equals','Test.*All') -Match 'all'
+Add-SourceFeatureAssessment -Ctx $ctx -Id 'minimum.condition_tests' -Level 'minimum' -Category 'tests' -Requirement 'Condition unit tests for equals in contains and all exist' -Patterns @('Test.*Equals','Test.*In','Test.*Contains','Test.*All') -Match 'all'
 
 Add-SourceFeatureAssessment -Ctx $ctx -Id 'good.any_group' -Level 'good' -Category 'algorithm' -Requirement 'any logical group' -Patterns @('AnyConditions|yaml:"any"|Any') -Match 'any'
 Add-SourceFeatureAssessment -Ctx $ctx -Id 'good.exists' -Level 'good' -Category 'algorithm' -Requirement 'exists condition' -Patterns @('exists|Exists') -Match 'any'
