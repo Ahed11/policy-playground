@@ -2,8 +2,6 @@ package policy
 
 import "testing"
 
-//Везде где идет разделение проверки функции на событие 1 и 2, для события 1 она должна возвращать результат false , а 2 возвращать true.
-
 func TestCheckIfEquals_FieldIsEmptyInEvent(t *testing.T) {
 	var event Event = Event{
 		Action: "email_send",
@@ -163,7 +161,7 @@ func TestIfContainsEvent1(t *testing.T) {
 		Contains: "personal_data",
 	}
 
-	result, reason, err := CheckifContains(event_001, condition)
+	result, reason, err := CheckIfContains(event_001, condition)
 
 	if err != nil {
 		t.Fatalf("ошибка: %v", err)
@@ -191,7 +189,7 @@ func TestIfContainsEvent2(t *testing.T) {
 		Contains: "personal_data",
 	}
 
-	result, reason, err := CheckifContains(event_002, condition)
+	result, reason, err := CheckIfContains(event_002, condition)
 
 	if err != nil {
 		t.Fatalf("ошибка: %v", err)
@@ -211,12 +209,17 @@ func TestAllConditionsEvent1(t *testing.T) {
 	var event Event = Event{
 		Action: "email_send",
 		DestinationType: "none",
+		ContentClasses: []string{
+			"client_data",
+			"personal_data",
+		},
 	}
 
 	var condition Condition = Condition{
 		All: []Condition{
 			{Field: "action", Equals: "email_send"},
 			{Field: "destination_type", Equals: "external"},
+			{Field: "content_calsses", Equals: "personal_data"},
 		},
 	}
 
@@ -240,12 +243,17 @@ func TestAllConditionsEvent2(t *testing.T) {
 	var event Event = Event{
 		Action: "email_send",
 		DestinationType: "external",
+		ContentClasses: []string{
+			"client_data",
+			"personal_data",
+		},
 	}
 
 	var condition Condition = Condition{
 		All: []Condition{
 			{Field: "action", Equals: "email_send"},
 			{Field: "destination_type", Equals: "external"},
+			{Field: "content_classes", Equals: "personal_data"},
 		},
 	}
 
@@ -259,10 +267,10 @@ func TestAllConditionsEvent2(t *testing.T) {
 		t.Errorf("Ожидался true, получен %v", result)
 	}
 
-	if len(reasons) != 2 {
+	if len(reasons) != 3 {
 		t.Fatalf("количество причин неверно")
 	} else {
-		expectedReasons := []string{"action equals email_send" ,"destination_type equals external"}
+		expectedReasons := []string{"action equals email_send" ,"destination_type equals external", "content_classes contains personal_data"}
 	
 		for i := range reasons {
 			if reasons[i] != expectedReasons[i] {
