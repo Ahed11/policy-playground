@@ -1,0 +1,1 @@
+{"policy_id":"pol_external_client_data","policy_name":"Client data to external channel","severity":"high","event_id":"evt_002","user_id":"user_001","matched":true,"reasons":["action equals email_send","destination_type equals external","content_classes contains client_data"]}
