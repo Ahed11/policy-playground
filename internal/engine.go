@@ -6,46 +6,55 @@ import (
 
 func CreateAlert(policy Policy, event Event) (alert Alert, created bool, err error) {
 	localReasons := []string{}
-	
-	if policy.Condition.Field == "" && policy.Condition.All == nil {
+	var ok bool
+	var localErr error
+	var reason string
+	var reasons []string
+
+	switch {
+	case policy.Condition.Field == "" && policy.Condition.All == nil && policy.Condition.Any == nil:
 		return alert, false, fmt.Errorf("нет ни простого, ни составного условия")
-	}
-	
-	if policy.Condition.Field != "" && policy.Condition.All != nil {
-		return alert, false, fmt.Errorf("одновременно заполнены простое и all")
+	case policy.Condition.Field != "" && len(policy.Condition.All) != 0 && len(policy.Condition.Any) != 0:
+		return alert, false, fmt.Errorf("одновременно заполнены простое условие и группы all и any")
+	case policy.Condition.Field != "" && len(policy.Condition.All) != 0:
+		return alert, false, fmt.Errorf("одновременно заполнены простое условие и группа all")
+	case policy.Condition.Field != "" && len(policy.Condition.Any) != 0:
+		return alert, false, fmt.Errorf("одновременно заполнены простое условие и группа any")
+	case len(policy.Condition.All) != 0 && len(policy.Condition.Any) != 0:
+		return alert, false, fmt.Errorf("одновременно заполнены группы all и any")
+	case policy.Condition.All != nil &&  len(policy.Condition.All) == 0:
+		return alert, false, fmt.Errorf("группа all существует, но не содержит элементов")
+	case policy.Condition.Any != nil &&  len(policy.Condition.Any) == 0:
+		return alert, false, fmt.Errorf("группа any существует, но не содержит элементов")
+	case policy.Condition.Field != "" && ((policy.Condition.Equals != "" && len(policy.Condition.In) != 0) || (policy.Condition.Equals != "" && policy.Condition.Contains != "") || (len(policy.Condition.In) != 0 && policy.Condition.Contains != "")):
+		return alert, false, fmt.Errorf("заполнено более одного оператора")
+	case policy.Condition.Field != "" && policy.Condition.Equals != "":
+		ok, reason, localErr = CheckIfEquals(event, policy.Condition)
+	case policy.Condition.Field != "" && policy.Condition.Contains != "":
+		ok, reason, localErr = CheckIfContains(event, policy.Condition)
+	case policy.Condition.Field != "" && len(policy.Condition.In) != 0:
+		ok, reason, localErr = CheckIfIn(event, policy.Condition)
+	case policy.Condition.All != nil:
+		ok, reasons, localErr = AllConditions(event, policy.Condition)
+	case policy.Condition.Any != nil:
+		ok, reasons, localErr = AnyConditions(event, policy.Condition)
+	default:
+		return alert, false, fmt.Errorf("политика %v: у простого условия отсутствует поддерживаемый оператор", policy.PolicyID)
 	}
 
-	if policy.Condition.All != nil && len(policy.Condition.All) == 0 {
-			return alert, false, fmt.Errorf("группа all существует, но не содержит элементов")
+	if localErr != nil {
+		return alert, false, fmt.Errorf("политика %v: %w", policy.PolicyID, localErr)
 	}
-
-	if policy.Condition.Field != "" && policy.Condition.Equals != "" {
-		result, reason, err := CheckIfEquals(event, policy.Condition)
-		
-		if err != nil {
-			return alert, false, fmt.Errorf("политика %v: %w", policy.PolicyID, err)
-		}
-		if result == true{
+	if ok == true{
+		if reason != "" {
 			localReasons = append(localReasons, reason)
-		} else {
-			return alert, false, nil
-		}
-	} else if policy.Condition.All != nil {
-		result, reasons, err := AllConditions(event, policy.Condition)
-
-		if err != nil {
-			return alert, false, fmt.Errorf("политика %v: %w", policy.PolicyID, err)
-		}
-
-		if result == true {
+		} else if len(reasons) != 0 {
 			for i := range reasons {
 				localReasons = append(localReasons, reasons[i])
 			}
-		} else {
-			return alert, false, nil
 		}
 	} else {
-		return alert, false, fmt.Errorf("политика %v: у простого условия отсутствует поддерживаемый оператор", policy.PolicyID)
+		return alert, false, nil
 	}
 
 	alert = Alert{
