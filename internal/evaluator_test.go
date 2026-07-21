@@ -152,10 +152,10 @@ func TestCheckIfContainsErrors(t *testing.T) {
 	}
 
 	event := Event{
-		ContentClasses: []string{
+		ContentClasses: new([]string{
 			"client_data",
 			"personal_data",
-		},
+		}),
 	}
 
 	for _, test := range tests {
@@ -207,10 +207,10 @@ func TestCheckIfContains(t *testing.T) {
 		{
 			"successContains",
 			Event{
-				ContentClasses: []string{
+				ContentClasses: new([]string{
 					"client_data",
 					"personal_data",
-				},
+				}),
 			},
 			Condition{
 				Field: "content_classes",
@@ -222,10 +222,10 @@ func TestCheckIfContains(t *testing.T) {
 		{
 			"NotSuccessContains",
 			Event{
-				ContentClasses: []string{
+				ContentClasses: new([]string{
 					"other_data",
 					"personal_data",
-				},
+				}),
 			},
 			Condition{
 				Field: "content_classes",
@@ -280,7 +280,7 @@ func TestCheckIfInErrors(t *testing.T) {
 	}
 
 	var event Event = Event{
-		FileExt: "xlsx",
+		FileExt: new("xlsx"),
 	}
 
 	for _, test := range tests {
@@ -332,7 +332,7 @@ func TestCheckIfIn(t *testing.T) {
 		{
 			"successIn",
 			Event{
-				FileExt: "xlsx",
+				FileExt: new("xlsx"),
 			},
 			Condition{
 				Field: "file_ext",
@@ -348,7 +348,7 @@ func TestCheckIfIn(t *testing.T) {
 		{
 			"NotSuccessIn",
 			Event{
-				FileExt: "go",
+				FileExt: new("go"),
 			},
 			Condition{
 				Field: "file_ext",
@@ -366,6 +366,337 @@ func TestCheckIfIn(t *testing.T) {
 	for _, test := range arrayOfForms {
 		t.Run(test.name, func(t *testing.T){
 			generalCheckIfIn(t, test.event, test.condition, test.expectedResult, test.expectedReason)
+		})
+	}
+}
+
+func TestCheckIfExistsErrors(t *testing.T) {
+	tests := []struct {
+		name string
+		condition Condition
+		expectedError string
+	}{
+		{
+			"поле пусто",
+			Condition{
+				Field: "",
+				Exists: new(true),
+			},
+			"поле пусто",
+		},
+		{
+			"поле exists не существует",
+			Condition{
+				Field: "file_ext",
+			},
+			"поле exists не существует",
+		},
+		{
+			"поле не поддерживается",
+			Condition{
+				Field: "path",
+				Exists: new(true),
+			},
+			"поле не поддерживается",
+		},
+	}
+
+	var event Event = Event{
+		FileName:       new("client_base.xlsx"),
+		FileExt:        new("xlsx"),
+		ContentClasses: new([]string{"client_data", "personal_data"}),
+		SizeBytes:      new(204800),
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func (t *testing.T){
+			_, _, err := CheckIfExists(event, test.condition)
+
+			if err == nil {
+				t.Fatalf("ожидалась ошибка: %v, но ошибка не получена", test.expectedError)
+			}
+
+			if err.Error() != test.expectedError {
+				t.Errorf("ожидалась ошибка: %v, но получена ошибка: %v", test.expectedError, err)
+			}
+		})
+	}
+}
+
+func generalCheckIfExists(t *testing.T, event Event, condition Condition, expectedResult bool, expectedReason string) {
+
+	t.Helper()
+
+	result, reason, err := CheckIfExists(event, condition)
+
+	if err != nil {
+		t.Fatalf("ошибка: %v", err)
+	}
+
+	if result != expectedResult {
+		t.Errorf("ожидался %v, получен %v", expectedResult, result)
+	}
+
+	if reason != expectedReason {
+		t.Errorf("ожидалась причина: %q, получена: %q", expectedReason, reason)
+	}
+}
+
+func TestCheckIfExists(t *testing.T) {
+	type testCases struct {
+		name string
+		event Event
+		condition Condition
+		expectedResult bool
+		expectedReason string
+	}
+
+	arrayOfForms := []testCases{
+		{
+			"successExist_file_ext_1",
+			Event{
+				FileName:       new("client_base.xlsx"),
+				FileExt:        new("xlsx"),
+				ContentClasses: new([]string{"client_data", "personal_data"}),
+				SizeBytes:      new(204800),
+			},
+			Condition{
+				Field: "file_ext",
+				Exists: new(true),
+			},
+			true,
+			"file_ext exists",
+		},
+		{
+			"successExist_file_ext_2",
+			Event{
+				FileName:       new("client_base.xlsx"),
+				FileExt:        nil,
+				ContentClasses: new([]string{"client_data", "personal_data"}),
+				SizeBytes:      new(204800),
+			},
+			Condition{
+				Field: "file_ext",
+				Exists: new(false),
+			},
+			true,
+			"file_ext does not exist",
+		},
+		{
+			"NotSuccessExists_file_ext_1",
+			Event{
+				FileName:       new("client_base.xlsx"),
+				FileExt:        new("xlsx"),
+				ContentClasses: new([]string{"client_data", "personal_data"}),
+				SizeBytes:      new(204800),
+			},
+			Condition{
+				Field: "file_ext",
+				Exists: new(false),
+			},
+			false,
+			"",
+		},
+		{
+			"NotSuccessExists_file_ext_2",
+			Event{
+				FileName:       new("client_base.xlsx"),
+				FileExt:        nil,
+				ContentClasses: new([]string{"client_data", "personal_data"}),
+				SizeBytes:      new(204800),
+			},
+			Condition{
+				Field: "file_ext",
+				Exists: new(true),
+			},
+			false,
+			"",
+		},
+				{
+			"successExist_file_name_1",
+			Event{
+				FileName:       new("client_base.xlsx"),
+				FileExt:        new("xlsx"),
+				ContentClasses: new([]string{"client_data", "personal_data"}),
+				SizeBytes:      new(204800),
+			},
+			Condition{
+				Field: "file_name",
+				Exists: new(true),
+			},
+			true,
+			"file_name exists",
+		},
+		{
+			"successExist_file_name_2",
+			Event{
+				FileName:       nil,
+				FileExt:        new("xlsx"),
+				ContentClasses: new([]string{"client_data", "personal_data"}),
+				SizeBytes:      new(204800),
+			},
+			Condition{
+				Field: "file_name",
+				Exists: new(false),
+			},
+			true,
+			"file_name does not exist",
+		},
+		{
+			"NotSuccessExists_file_name_1",
+			Event{
+				FileName:       new("client_base.xlsx"),
+				FileExt:        new("xlsx"),
+				ContentClasses: new([]string{"client_data", "personal_data"}),
+				SizeBytes:      new(204800),
+			},
+			Condition{
+				Field: "file_name",
+				Exists: new(false),
+			},
+			false,
+			"",
+		},
+		{
+			"NotSuccessExists_file_name_2",
+			Event{
+				FileName:       nil,
+				FileExt:        new("xlsx"),
+				ContentClasses: new([]string{"client_data", "personal_data"}),
+				SizeBytes:      new(204800),
+			},
+			Condition{
+				Field: "file_name",
+				Exists: new(true),
+			},
+			false,
+			"",
+		},
+				{
+			"successExist_content_classes_1",
+			Event{
+				FileName:       new("client_base.xlsx"),
+				FileExt:        new("xlsx"),
+				ContentClasses: new([]string{"client_data", "personal_data"}),
+				SizeBytes:      new(204800),
+			},
+			Condition{
+				Field: "content_classes",
+				Exists: new(true),
+			},
+			true,
+			"content_classes exists",
+		},
+		{
+			"successExist_content_classes_2",
+			Event{
+				FileName:       new("client_base.xlsx"),
+				FileExt:        new("xlsx"),
+				ContentClasses: nil,
+				SizeBytes:      new(204800),
+			},
+			Condition{
+				Field: "content_classes",
+				Exists: new(false),
+			},
+			true,
+			"content_classes does not exist",
+		},
+		{
+			"NotSuccessExists_content_classes_1",
+			Event{
+				FileName:       new("client_base.xlsx"),
+				FileExt:        new("xlsx"),
+				ContentClasses: new([]string{"client_data", "personal_data"}),
+				SizeBytes:      new(204800),
+			},
+			Condition{
+				Field: "content_classes",
+				Exists: new(false),
+			},
+			false,
+			"",
+		},
+		{
+			"NotSuccessExists_content_classes_2",
+			Event{
+				FileName:       new("client_base.xlsx"),
+				FileExt:        new("xlsx"),
+				ContentClasses: nil,
+				SizeBytes:      new(204800),
+			},
+			Condition{
+				Field: "content_classes",
+				Exists: new(true),
+			},
+			false,
+			"",
+		},
+				{
+			"successExist_size_bytes_1",
+			Event{
+				FileName:       new("client_base.xlsx"),
+				FileExt:        new("xlsx"),
+				ContentClasses: new([]string{"client_data", "personal_data"}),
+				SizeBytes:      new(204800),
+			},
+			Condition{
+				Field: "size_bytes",
+				Exists: new(true),
+			},
+			true,
+			"size_bytes exists",
+		},
+		{
+			"successExist_size_bytes_2",
+			Event{
+				FileName:       new("client_base.xlsx"),
+				FileExt:        new("xlsx"),
+				ContentClasses: new([]string{"client_data", "personal_data"}),
+				SizeBytes:      nil,
+			},
+			Condition{
+				Field: "size_bytes",
+				Exists: new(false),
+			},
+			true,
+			"size_bytes does not exist",
+		},
+		{
+			"NotSuccessExists_size_bytes_1",
+			Event{
+				FileName:       new("client_base.xlsx"),
+				FileExt:        new("xlsx"),
+				ContentClasses: new([]string{"client_data", "personal_data"}),
+				SizeBytes:      new(204800),
+			},
+			Condition{
+				Field: "size_bytes",
+				Exists: new(false),
+			},
+			false,
+			"",
+		},
+		{
+			"NotSuccessExists_size_bytes_2",
+			Event{
+				FileName:       new("client_base.xlsx"),
+				FileExt:        new("xlsx"),
+				ContentClasses: new([]string{"client_data", "personal_data"}),
+				SizeBytes:      nil,
+			},
+			Condition{
+				Field: "size_bytes",
+				Exists: new(true),
+			},
+			false,
+			"",
+		},
+	}
+
+	for _, test := range arrayOfForms {
+		t.Run(test.name, func(t *testing.T){
+			generalCheckIfExists(t, test.event, test.condition, test.expectedResult, test.expectedReason)
 		})
 	}
 }
@@ -424,8 +755,8 @@ func TestCheckIfAllConditionsErrors(t *testing.T) {
 	var event Event = Event{
 		Action: "email_send",
 		DestinationType: "external",
-		ContentClasses: []string{"client_data","personal_data",},
-		FileExt: "xlsx",
+		ContentClasses: new([]string{"client_data","personal_data",}),
+		FileExt: new("xlsx"),
 	}
 
 	for _, test := range tests {
@@ -489,8 +820,8 @@ func TestCheckIfAllConditions(t *testing.T) {
 			Event{
 				Action: "email_send",
 				DestinationType: "external",
-				ContentClasses: []string{"client_data","personal_data",},
-				FileExt: "xlsx",
+				ContentClasses: new([]string{"client_data","personal_data",}),
+				FileExt: new("xlsx"),
 			},
 			Condition{
 				All: []Condition{
@@ -513,8 +844,8 @@ func TestCheckIfAllConditions(t *testing.T) {
 			Event{
 				Action: "email_send",
 				DestinationType: "external",
-				ContentClasses: []string{"client_data","personal_data",},
-				FileExt: "xlsx",
+				ContentClasses: new([]string{"client_data","personal_data",}),
+				FileExt: new("xlsx"),
 			},
 			Condition{
 				All: []Condition{
@@ -590,8 +921,8 @@ func TestCheckIfAnyConditionsErrors(t *testing.T) {
 	var event Event = Event{
 		Action: "email_send",
 		DestinationType: "external",
-		ContentClasses: []string{"client_data","personal_data",},
-		FileExt: "xlsx",
+		ContentClasses: new([]string{"client_data","personal_data",}),
+		FileExt: new("xlsx"),
 	}
 
 	for _, test := range tests {
@@ -655,8 +986,8 @@ func TestCheckIfAnyConditions(t *testing.T) {
 			Event{
 				Action: "open_file",
 				DestinationType: "internal",
-				ContentClasses: []string{"client_data","personal_data",},
-				FileExt: "xlsx",
+				ContentClasses: new([]string{"client_data","personal_data",}),
+				FileExt: new("xlsx"),
 			},
 			Condition{
 				Any: []Condition{
@@ -677,8 +1008,8 @@ func TestCheckIfAnyConditions(t *testing.T) {
 			Event{
 				Action: "email_send",
 				DestinationType: "internal",
-				ContentClasses: []string{"client_data"},
-				FileExt: "go",
+				ContentClasses: new([]string{"client_data"}),
+				FileExt: new("go"),
 			},
 			Condition{
 				Any: []Condition{
@@ -698,8 +1029,8 @@ func TestCheckIfAnyConditions(t *testing.T) {
 			Event{
 				Action: "open_file",
 				DestinationType: "external",
-				ContentClasses: []string{"client_data"},
-				FileExt: "go",
+				ContentClasses: new([]string{"client_data"}),
+				FileExt: new("go"),
 			},
 			Condition{
 				Any: []Condition{
@@ -719,8 +1050,8 @@ func TestCheckIfAnyConditions(t *testing.T) {
 			Event{
 				Action: "email_send",
 				DestinationType: "external",
-				ContentClasses: []string{"client_data","personal_data",},
-				FileExt: "xlsx",
+				ContentClasses: new([]string{"client_data","personal_data",}),
+				FileExt: new("xlsx"),
 			},
 			Condition{
 				Any: []Condition{
@@ -743,10 +1074,10 @@ func TestCheckIfAnyConditions(t *testing.T) {
 			Event{
 				Action: "open_file",
 				DestinationType: "internal",
-				ContentClasses: []string{
+				ContentClasses: new([]string{
 					"client_data",
-				},
-				FileExt: "go",
+				}),
+				FileExt: new("go"),
 			},
 			Condition{
 				Any: []Condition{
