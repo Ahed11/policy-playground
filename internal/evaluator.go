@@ -27,7 +27,7 @@ func getValueForField(event Event, condition Condition) (value string, err error
 	case "file_name":
 		return *event.FileName, nil
 	case "file_ext":
-		return event.FileExt, nil
+		return *event.FileExt, nil
 	case "channel":
 		return event.Channel, nil
 	case "destination_type":
@@ -67,9 +67,15 @@ func CheckIfContains(event Event, condition Condition) (result bool, reason stri
 		return false, "", fmt.Errorf("нет значения для contains")
 	}
 
-	for i := range event.ContentClasses {
-		if event.ContentClasses[i] == condition.Contains {
-			return true, fmt.Sprintf("content_classes contains %s", event.ContentClasses[i]), nil
+	if event.ContentClasses == nil {
+        return false, "", fmt.Errorf("поле contains не существует")
+    }
+
+	classes := *event.ContentClasses
+
+	for i := range classes  {
+		if classes[i] == condition.Contains {
+			return true, fmt.Sprintf("content_classes contains %s", classes[i]), nil
 		}
 	}
 
@@ -101,28 +107,40 @@ func CheckIfIn(event Event, condition Condition) (result bool, reason string, er
 	return false, "", nil
 }
 
-// Дописать функцию для exists
+func CheckIfExists(event Event, condition Condition) (result bool, reason string, err error) {
+	if condition.Field == "" {
+		return false, "", fmt.Errorf("поле пусто")
+	}
 
-// func CheckIfExists(event Event, condition Condition) (result bool, reason string, err error) {
+	if condition.Exists == nil {
+		return false, "", fmt.Errorf("поле exists не существует")
+	}
 
-// 	if condition.Field == "" {
-// 		return false, "", fmt.Errorf("поле пусто")
-// 	}
+	var fieldExists bool
 
-// 	if condition.Field != "file_name"{
-// 		return false, "", fmt.Errorf("поле не поддерживается")
-// 	}
+	switch condition.Field {
+	case "file_name":
+		fieldExists = event.FileName != nil
+	case "file_ext":
+		fieldExists = event.FileExt != nil
+	case "content_classes":
+		fieldExists = event.ContentClasses != nil
+	case "size_bytes":
+		fieldExists = event.SizeBytes != nil
+	default:
+		return false, "", fmt.Errorf("поле не поддерживается")
+	}
 
-// 	if condition.Exists == nil {
-// 		return false, "", fmt.Errorf("поле exists не существует")
-// 	}
+	if fieldExists != *condition.Exists {
+		return false, "", nil
+	}
 
-// 	if *condition.Exists == true && event.FileName != nil {
-// 		return true, fmt.Sprintf("%v exists", condition.Field), nil
-// 	}
-	
-// 	return false, "", nil
-// }
+	if *condition.Exists {
+		return true, fmt.Sprintf("%v exists", condition.Field), nil
+	}
+
+	return true, fmt.Sprintf("%v does not exist", condition.Field), nil
+}
 
 func AllConditions(event Event, condition Condition) (result bool, reasons []string, err error) {
 	if len(condition.All) == 0 {
