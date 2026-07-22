@@ -3,48 +3,62 @@ package policy
 import (
 	"slices"
 	"fmt"
+	"strconv"
 )
 
-func getValueForField(event Event, condition Condition) (value string, err error) {
+func intToString(num int) string {
+    return strconv.Itoa(num)
+}
+
+func getValueForField(event Event, condition Condition) (value string, exist bool, err error) {
 
 	field := condition.Field
 
 	if field == "" {
-		return "", fmt.Errorf("поле пусто")
+		return "", false, fmt.Errorf("поле пусто")
 	}
 
 	switch field {
 	case "event_id":
-		return event.EventID, nil
+		return event.EventID, true, nil
 	case "time":
-		return event.Time, nil
+		return event.Time, true, nil
 	case "user_id":
-		return event.UserID, nil
+		return event.UserID, true, nil
 	case "action":
-		return event.Action, nil
+		return event.Action, true, nil
 	case "object_type":
-		return event.ObjectType, nil
+		return event.ObjectType, true, nil
 	case "file_name":
-		return *event.FileName, nil
+		if event.FileName == nil {return "", false, nil}
+		return *event.FileName, true, nil
 	case "file_ext":
-		return *event.FileExt, nil
+		if event.FileExt == nil {return "", false, nil}
+		return *event.FileExt, true, nil
 	case "channel":
-		return event.Channel, nil
+		return event.Channel, true, nil
+	case "size_bytes":
+		if event.SizeBytes == nil {return "", false, nil}
+		return intToString(*event.SizeBytes), true, nil
 	case "destination_type":
-		return event.DestinationType, nil
+		return event.DestinationType, true, nil
 	}
-	return "", fmt.Errorf("поле не поддерживается")
+	return "", false, fmt.Errorf("поле не поддерживается")
 }
 
-func CheckIfEquals(event Event, condition Condition) (result bool, reason string, err error) {
-	value, valueErr := getValueForField(event, condition)
+func CheckIfEquals(event Event, condition Condition) (result bool, reason string, err error) {	
+	if condition.Equals == "" {
+		return false, "", fmt.Errorf("нет значения для equals")
+	}
 
+	value, fieldExist, valueErr := getValueForField(event, condition)
+	
 	if valueErr != nil {
 		return false, "", valueErr
 	}
 
-	if condition.Equals == "" {
-		return false, "", fmt.Errorf("нет значения для equals")
+	if fieldExist == false {
+		return false, "", nil
 	}
 
 	if condition.Equals == value {
@@ -68,7 +82,7 @@ func CheckIfContains(event Event, condition Condition) (result bool, reason stri
 	}
 
 	if event.ContentClasses == nil {
-        return false, "", fmt.Errorf("поле contains не существует")
+        return false, "", nil
     }
 
 	classes := *event.ContentClasses
@@ -82,13 +96,7 @@ func CheckIfContains(event Event, condition Condition) (result bool, reason stri
 	return false, "", nil
 }
 
-func CheckIfIn(event Event, condition Condition) (result bool, reason string, err error) {
-	value, valueErr := getValueForField(event, condition)
-
-	if valueErr != nil {
-		return false, "", valueErr
-	}
-	
+func CheckIfIn(event Event, condition Condition) (result bool, reason string, err error) {	
 	countOfEmptyElements := 0
 	for i := range condition.In {
 		if condition.In[i] == "" {
@@ -98,6 +106,16 @@ func CheckIfIn(event Event, condition Condition) (result bool, reason string, er
 
 	if countOfEmptyElements == len(condition.In) {
 		return false, "", fmt.Errorf("нет значения для in")
+	}
+
+	value, fieldExist, valueErr := getValueForField(event, condition)
+
+	if valueErr != nil {
+		return false, "", valueErr
+	}
+
+	if fieldExist == false {
+		return false, "", nil
 	}
 
 	if slices.Contains(condition.In, value) {
@@ -157,9 +175,9 @@ func AllConditions(event Event, condition Condition) (result bool, reasons []str
 		switch {
 		case cond.Field == "":
 			return false, nil, fmt.Errorf("поле не заполнено") 
-		case (cond.Equals != "" && cond.Contains != "") || (cond.Equals != "" && len(cond.In) != 0) || (cond.Contains != "" && len(cond.In) != 0):
+		case (cond.Equals != "" && cond.Contains != "") || (cond.Equals != "" && len(cond.In) != 0) || (cond.Equals != "" && cond.Exists != nil) || (cond.Contains != "" && len(cond.In) != 0) || (cond.Contains != "" && cond.Exists != nil) || (len(cond.In) != 0 && cond.Exists != nil):
 			return false, nil, fmt.Errorf("заполнено более одного оператора")
-		case cond.Equals == "" && cond.Contains == "" && len(cond.In) == 0:
+		case cond.Equals == "" && cond.Contains == "" && len(cond.In) == 0 && cond.Exists == nil:
 			return false, nil, fmt.Errorf("нет заполненного оператора")
 		case cond.Equals != "":
 			ok, reason, checkErr = CheckIfEquals(event, cond)
@@ -167,6 +185,8 @@ func AllConditions(event Event, condition Condition) (result bool, reasons []str
 			ok, reason, checkErr = CheckIfContains(event, cond)
 		case len(cond.In) != 0:
 			ok, reason, checkErr = CheckIfIn(event, cond)
+		case cond.Exists != nil:
+			ok, reason, checkErr = CheckIfExists(event, cond)
 		}
 
 		if checkErr != nil {
@@ -197,9 +217,9 @@ func AnyConditions(event Event, condition Condition) (result bool, reasons []str
 		switch {
 		case cond.Field == "":
 			return false, nil, fmt.Errorf("поле не заполнено") 
-		case (cond.Equals != "" && cond.Contains != "") || (cond.Equals != "" && len(cond.In) != 0) || (cond.Contains != "" && len(cond.In) != 0):
+		case (cond.Equals != "" && cond.Contains != "") || (cond.Equals != "" && len(cond.In) != 0) || (cond.Equals != "" && cond.Exists != nil) || (cond.Contains != "" && len(cond.In) != 0) || (cond.Contains != "" && cond.Exists != nil) || (len(cond.In) != 0 && cond.Exists != nil):
 			return false, nil, fmt.Errorf("заполнено более одного оператора")
-		case cond.Equals == "" && cond.Contains == "" && len(cond.In) == 0:
+		case cond.Equals == "" && cond.Contains == "" && len(cond.In) == 0 && cond.Exists == nil:
 			return false, nil, fmt.Errorf("нет заполненного оператора")
 		case cond.Equals != "":
 			ok, reason, checkErr = CheckIfEquals(event, cond)
@@ -207,6 +227,8 @@ func AnyConditions(event Event, condition Condition) (result bool, reasons []str
 			ok, reason, checkErr = CheckIfContains(event, cond)
 		case len(cond.In) != 0:
 			ok, reason, checkErr = CheckIfIn(event, cond)
+		case cond.Exists != nil:
+			ok, reason, checkErr = CheckIfExists(event, cond)
 		}
 
 		if checkErr != nil {
