@@ -26,7 +26,7 @@ func CreateAlert(policy Policy, event Event) (alert Alert, created bool, err err
 		return alert, false, fmt.Errorf("группа all существует, но не содержит элементов")
 	case policy.Condition.Any != nil &&  len(policy.Condition.Any) == 0:
 		return alert, false, fmt.Errorf("группа any существует, но не содержит элементов")
-	case policy.Condition.Field != "" && ((policy.Condition.Equals != "" && len(policy.Condition.In) != 0) || (policy.Condition.Equals != "" && policy.Condition.Contains != "") || (len(policy.Condition.In) != 0 && policy.Condition.Contains != "")):
+	case policy.Condition.Field != "" && ((policy.Condition.Equals != "" && len(policy.Condition.In) != 0) || (policy.Condition.Equals != "" && policy.Condition.Contains != "") || (policy.Condition.Equals != "" && policy.Condition.Exists != nil) || (policy.Condition.Contains != "" && len(policy.Condition.In) != 0) || (policy.Condition.Contains != "" && policy.Condition.Exists != nil) || (len(policy.Condition.In) != 0 && policy.Condition.Exists != nil)):
 		return alert, false, fmt.Errorf("заполнено более одного оператора")
 	case policy.Condition.Field != "" && policy.Condition.Equals != "":
 		ok, reason, localErr = CheckIfEquals(event, policy.Condition)
@@ -34,6 +34,8 @@ func CreateAlert(policy Policy, event Event) (alert Alert, created bool, err err
 		ok, reason, localErr = CheckIfContains(event, policy.Condition)
 	case policy.Condition.Field != "" && len(policy.Condition.In) != 0:
 		ok, reason, localErr = CheckIfIn(event, policy.Condition)
+	case policy.Condition.Field != "" && policy.Condition.Exists != nil:
+		ok, reason, localErr = CheckIfExists(event, policy.Condition)
 	case policy.Condition.All != nil:
 		ok, reasons, localErr = AllConditions(event, policy.Condition)
 	case policy.Condition.Any != nil:
