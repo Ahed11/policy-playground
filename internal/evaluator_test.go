@@ -87,7 +87,7 @@ func TestCheckIfEquals(t *testing.T) {
 
 	arrayOfForms := []testCases{
 		{
-			"successEquals",
+			"successEquals_1",
 			Event{
 				Action: "email_send",
 			},
@@ -99,13 +99,61 @@ func TestCheckIfEquals(t *testing.T) {
 			"action equals email_send",
 		},
 		{
-			"NotSuccessEquals",
+			"successEquals_2",
+			Event{
+				SizeBytes: new(204800),
+			},
+			Condition{
+				Field: "size_bytes",
+				Equals: "204800",
+			},
+			true,
+			"size_bytes equals 204800",
+		},
+		{
+			"NotSuccessEquals_1",
 			Event{
 				Action: "open_file",
 			},
 			Condition{
 				Field: "action",
 				Equals: "email_send",
+			},
+			false,
+			"",
+		},
+		{
+			"NotSuccessEquals_2",
+			Event{
+				FileName: nil,
+			},
+			Condition{
+				Field: "file_name",
+				Equals: "file",
+			},
+			false,
+			"",
+		},
+		{
+			"NotSuccessEquals_3",
+			Event{
+				FileExt: nil,
+			},
+			Condition{
+				Field: "file_ext",
+				Equals: "xlsx",
+			},
+			false,
+			"",
+		},
+		{
+			"NotSuccessEquals_4",
+			Event{
+				SizeBytes: nil,
+			},
+			Condition{
+				Field: "size_bytes",
+				Equals: "204800",
 			},
 			false,
 			"",
@@ -220,12 +268,24 @@ func TestCheckIfContains(t *testing.T) {
 			"content_classes contains client_data",
 		},
 		{
-			"NotSuccessContains",
+			"NotSuccessContains_1",
 			Event{
 				ContentClasses: new([]string{
 					"other_data",
 					"personal_data",
 				}),
+			},
+			Condition{
+				Field: "content_classes",
+				Contains: "client_data",
+			},
+			false,
+			"",
+		},
+		{
+			"NotSuccessContains_2",
+			Event{
+				ContentClasses: nil,
 			},
 			Condition{
 				Field: "content_classes",
@@ -330,7 +390,7 @@ func TestCheckIfIn(t *testing.T) {
 
 	arrayOfForms := []testCases{
 		{
-			"successIn",
+			"successIn_1",
 			Event{
 				FileExt: new("xlsx"),
 			},
@@ -346,7 +406,23 @@ func TestCheckIfIn(t *testing.T) {
 			"file_ext in [xlsx docx pdf]",
 		},
 		{
-			"NotSuccessIn",
+			"successIn_2",
+			Event{
+				SizeBytes: new(204800),
+			},
+			Condition{
+				Field: "size_bytes",
+				In: []string{
+					"204800",
+					"102400",
+					"51200",
+				},
+			},
+			true,
+			"size_bytes in [204800 102400 51200]",
+		},
+		{
+			"NotSuccessIn_1",
 			Event{
 				FileExt: new("go"),
 			},
@@ -356,6 +432,54 @@ func TestCheckIfIn(t *testing.T) {
 					"xlsx",
 					"docx",
 					"pdf",
+				},
+			},
+			false,
+			"",
+		},
+		{
+			"NotSuccessIn_2",
+			Event{
+				FileExt: nil,
+			},
+			Condition{
+				Field: "file_ext",
+				In: []string{
+					"xlsx",
+					"docx",
+					"pdf",
+				},
+			},
+			false,
+			"",
+		},
+		{
+			"NotSuccessIn_3",
+			Event{
+				FileName: nil,
+			},
+			Condition{
+				Field: "file_name",
+				In: []string{
+					"document",
+					"table",
+					"file",
+				},
+			},
+			false,
+			"",
+		},
+		{
+			"NotSuccessIn_4",
+			Event{
+				SizeBytes: nil,
+			},
+			Condition{
+				Field: "size_bytes",
+				In: []string{
+					"204800",
+					"102400",
+					"51200",
 				},
 			},
 			false,
@@ -483,6 +607,21 @@ func TestCheckIfExists(t *testing.T) {
 			"file_ext does not exist",
 		},
 		{
+			"successExist_file_ext_3",
+			Event{
+				FileName:       new("client_base.xlsx"),
+				FileExt:        new(""),
+				ContentClasses: new([]string{"client_data", "personal_data"}),
+				SizeBytes:      new(204800),
+			},
+			Condition{
+				Field: "file_ext",
+				Exists: new(true),
+			},
+			true,
+			"file_ext exists",
+		},
+		{
 			"NotSuccessExists_file_ext_1",
 			Event{
 				FileName:       new("client_base.xlsx"),
@@ -512,7 +651,7 @@ func TestCheckIfExists(t *testing.T) {
 			false,
 			"",
 		},
-				{
+		{
 			"successExist_file_name_1",
 			Event{
 				FileName:       new("client_base.xlsx"),
@@ -541,6 +680,21 @@ func TestCheckIfExists(t *testing.T) {
 			},
 			true,
 			"file_name does not exist",
+		},
+		{
+			"successExist_file_name_3",
+			Event{
+				FileName:       new(""),
+				FileExt:        new("xlsx"),
+				ContentClasses: new([]string{"client_data", "personal_data"}),
+				SizeBytes:      new(204800),
+			},
+			Condition{
+				Field: "file_name",
+				Exists: new(true),
+			},
+			true,
+			"file_name exists",
 		},
 		{
 			"NotSuccessExists_file_name_1",
@@ -572,7 +726,7 @@ func TestCheckIfExists(t *testing.T) {
 			false,
 			"",
 		},
-				{
+		{
 			"successExist_content_classes_1",
 			Event{
 				FileName:       new("client_base.xlsx"),
@@ -601,6 +755,21 @@ func TestCheckIfExists(t *testing.T) {
 			},
 			true,
 			"content_classes does not exist",
+		},
+		{
+			"successExist_content_classes_3",
+			Event{
+				FileName:       new("client_base.xlsx"),
+				FileExt:        new("xlsx"),
+				ContentClasses: new([]string{}),
+				SizeBytes:      new(204800),
+			},
+			Condition{
+				Field: "content_classes",
+				Exists: new(true),
+			},
+			true,
+			"content_classes exists",
 		},
 		{
 			"NotSuccessExists_content_classes_1",
@@ -632,7 +801,7 @@ func TestCheckIfExists(t *testing.T) {
 			false,
 			"",
 		},
-				{
+		{
 			"successExist_size_bytes_1",
 			Event{
 				FileName:       new("client_base.xlsx"),
@@ -661,6 +830,21 @@ func TestCheckIfExists(t *testing.T) {
 			},
 			true,
 			"size_bytes does not exist",
+		},
+		{
+			"successExist_size_bytes_3",
+			Event{
+				FileName:       new("client_base.xlsx"),
+				FileExt:        new("xlsx"),
+				ContentClasses: new([]string{"client_data", "personal_data"}),
+				SizeBytes:      new(0),
+			},
+			Condition{
+				Field: "size_bytes",
+				Exists: new(true),
+			},
+			true,
+			"size_bytes exists",
 		},
 		{
 			"NotSuccessExists_size_bytes_1",
@@ -722,18 +906,85 @@ func TestCheckIfAllConditionsErrors(t *testing.T) {
 					{Field: "destination_type", Equals: "external"},
 					{Field: "content_classes", Contains: "personal_data"},
 					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_name", Exists: new(true)},
 				},
 			},
 			"поле не заполнено",
 		},
 		{
-			"заполнено более одного оператора",
+			"заполнено более одного оператора 1",
 			Condition{
 				All: []Condition{
 					{Field: "action", Equals: "email_send", Contains: "personal_data"},
 					{Field: "destination_type", Equals: "external"},
 					{Field: "content_classes", Contains: "personal_data"},
 					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_name", Exists: new(true)},
+				},
+			},
+			"заполнено более одного оператора",
+		},
+		{
+			"заполнено более одного оператора 2",
+			Condition{
+				All: []Condition{
+					{Field: "action", Equals: "email_send", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "destination_type", Equals: "external"},
+					{Field: "content_classes", Contains: "personal_data"},
+					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_name", Exists: new(true)},
+				},
+			},
+			"заполнено более одного оператора",
+		},
+		{
+			"заполнено более одного оператора 3",
+			Condition{
+				All: []Condition{
+					{Field: "action", Equals: "email_send", Exists: new(true)},
+					{Field: "destination_type", Equals: "external"},
+					{Field: "content_classes", Contains: "personal_data"},
+					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_name", Exists: new(true)},
+				},
+			},
+			"заполнено более одного оператора",
+		},
+		{
+			"заполнено более одного оператора 4",
+			Condition{
+				All: []Condition{
+					{Field: "action", Equals: "email_send"},
+					{Field: "destination_type", Equals: "external"},
+					{Field: "content_classes", Contains: "personal_data", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_name", Exists: new(true)},
+				},
+			},
+			"заполнено более одного оператора",
+		},
+		{
+			"заполнено более одного оператора 5",
+			Condition{
+				All: []Condition{
+					{Field: "action", Equals: "email_send"},
+					{Field: "destination_type", Equals: "external"},
+					{Field: "content_classes", Contains: "personal_data", Exists: new(true)},
+					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_name", Exists: new(true)},
+				},
+			},
+			"заполнено более одного оператора",
+		},
+		{
+			"заполнено более одного оператора 6",
+			Condition{
+				All: []Condition{
+					{Field: "action", Equals: "email_send"},
+					{Field: "destination_type", Equals: "external"},
+					{Field: "content_classes", Contains: "personal_data"},
+					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}, Exists: new(true)},
+					{Field: "file_name", Exists: new(true)},
 				},
 			},
 			"заполнено более одного оператора",
@@ -746,6 +997,7 @@ func TestCheckIfAllConditionsErrors(t *testing.T) {
 					{Field: "destination_type", Equals: ""},
 					{Field: "content_classes", Contains: ""},
 					{Field: "file_ext", In: []string{}},
+					{Field: "file_name", Exists: nil},
 				},
 			},
 			"нет заполненного оператора",
@@ -816,7 +1068,7 @@ func TestCheckIfAllConditions(t *testing.T) {
 
 	arrayOfForms := []testCases{
 		{
-			"successAllConditions",
+			"successAllConditions_1",
 			Event{
 				Action: "email_send",
 				DestinationType: "external",
@@ -829,6 +1081,7 @@ func TestCheckIfAllConditions(t *testing.T) {
 					{Field: "destination_type", Equals: "external"},
 					{Field: "content_classes", Contains: "personal_data"},
 					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_ext", Exists: new(true)},
 				},
 			},
 			true,
@@ -837,10 +1090,11 @@ func TestCheckIfAllConditions(t *testing.T) {
 				"destination_type equals external",
 				"content_classes contains personal_data",
 				"file_ext in [xlsx docx pdf]",
+				"file_ext exists",
 			},
 		},
 		{
-			"NotSuccessAllConditions",
+			"successAllConditions_2",
 			Event{
 				Action: "email_send",
 				DestinationType: "external",
@@ -849,10 +1103,83 @@ func TestCheckIfAllConditions(t *testing.T) {
 			},
 			Condition{
 				All: []Condition{
-					{Field: "action", Equals: "open_file"},
+					{Field: "action", Equals: "email_send"},
 					{Field: "destination_type", Equals: "external"},
-					{Field: "content_classes", Contains: "other_data"},
+					{Field: "content_classes", Contains: "personal_data"},
 					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_name", Exists: new(false)},
+				},
+			},
+			true,
+			[]string{
+				"action equals email_send",
+				"destination_type equals external",
+				"content_classes contains personal_data",
+				"file_ext in [xlsx docx pdf]",
+				"file_name does not exist",
+			},
+		},
+		{
+			"successAllConditions_3",
+			Event{
+				Action: "email_send",
+				DestinationType: "external",
+				ContentClasses: new([]string{"client_data","personal_data",}),
+				FileExt: new(""),
+			},
+			Condition{
+				All: []Condition{
+					{Field: "action", Equals: "email_send"},
+					{Field: "destination_type", Equals: "external"},
+					{Field: "content_classes", Contains: "personal_data"},
+					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_ext", Exists: new(true)},
+				},
+			},
+			true,
+			[]string{
+				"action equals email_send",
+				"destination_type equals external",
+				"content_classes contains personal_data",
+				"file_ext in [xlsx docx pdf]",
+				"file_ext exists",
+			},
+		},
+		{
+			"NotSuccessAllConditions_1",
+			Event{
+				Action: "open_file",
+				DestinationType: "external",
+				ContentClasses: new([]string{"client_data"}),
+				FileExt: new("xlsx"),
+			},
+			Condition{
+				All: []Condition{
+					{Field: "action", Equals: "emai_send"},
+					{Field: "destination_type", Equals: "external"},
+					{Field: "content_classes", Contains: "personal_data"},
+					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_ext", Exists: new(true)},
+				},
+			},
+			false,
+			[]string{},
+		},
+		{
+			"NotSuccessAllConditions_2",
+			Event{
+				Action: "email_send",
+				DestinationType: "external",
+				ContentClasses: new([]string{"client_data", "personal_data"}),
+				FileExt: new("xlsx"),
+			},
+			Condition{
+				All: []Condition{
+					{Field: "action", Equals: "email_send"},
+					{Field: "destination_type", Equals: "external"},
+					{Field: "content_classes", Contains: "personal_data"},
+					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_name", Exists: new(true)},
 				},
 			},
 			false,
@@ -888,18 +1215,85 @@ func TestCheckIfAnyConditionsErrors(t *testing.T) {
 					{Field: "destination_type", Equals: "external"},
 					{Field: "content_classes", Contains: "personal_data"},
 					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_ext", Exists: new(true)},
 				},
 			},
 			"поле не заполнено",
 		},
 		{
-			"заполнено более одного оператора",
+			"заполнено более одного оператора 1",
 			Condition{
 				Any: []Condition{
 					{Field: "action", Equals: "email_send", Contains: "personal_data"},
 					{Field: "destination_type", Equals: "external"},
 					{Field: "content_classes", Contains: "personal_data"},
 					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_name", Exists: new(true)},
+				},
+			},
+			"заполнено более одного оператора",
+		},
+		{
+			"заполнено более одного оператора 2",
+			Condition{
+				Any: []Condition{
+					{Field: "action", Equals: "email_send", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "destination_type", Equals: "external"},
+					{Field: "content_classes", Contains: "personal_data"},
+					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_name", Exists: new(true)},
+				},
+			},
+			"заполнено более одного оператора",
+		},
+		{
+			"заполнено более одного оператора 3",
+			Condition{
+				Any: []Condition{
+					{Field: "action", Equals: "email_send", Exists: new(true)},
+					{Field: "destination_type", Equals: "external"},
+					{Field: "content_classes", Contains: "personal_data"},
+					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_name", Exists: new(true)},
+				},
+			},
+			"заполнено более одного оператора",
+		},
+		{
+			"заполнено более одного оператора 4",
+			Condition{
+				Any: []Condition{
+					{Field: "action", Equals: "email_send"},
+					{Field: "destination_type", Equals: "external"},
+					{Field: "content_classes", Contains: "personal_data", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_name", Exists: new(true)},
+				},
+			},
+			"заполнено более одного оператора",
+		},
+		{
+			"заполнено более одного оператора 5",
+			Condition{
+				Any: []Condition{
+					{Field: "action", Equals: "email_send"},
+					{Field: "destination_type", Equals: "external"},
+					{Field: "content_classes", Contains: "personal_data", Exists: new(true)},
+					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_name", Exists: new(true)},
+				},
+			},
+			"заполнено более одного оператора",
+		},
+		{
+			"заполнено более одного оператора 6",
+			Condition{
+				Any: []Condition{
+					{Field: "action", Equals: "email_send"},
+					{Field: "destination_type", Equals: "external"},
+					{Field: "content_classes", Contains: "personal_data"},
+					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}, Exists: new(true)},
+					{Field: "file_name", Exists: new(true)},
 				},
 			},
 			"заполнено более одного оператора",
@@ -912,6 +1306,7 @@ func TestCheckIfAnyConditionsErrors(t *testing.T) {
 					{Field: "destination_type", Equals: ""},
 					{Field: "content_classes", Contains: ""},
 					{Field: "file_ext", In: []string{}},
+					{Field: "file_ext", Exists: nil},
 				},
 			},
 			"нет заполненного оператора",
@@ -995,12 +1390,14 @@ func TestCheckIfAnyConditions(t *testing.T) {
 					{Field: "destination_type", Equals: "external"},
 					{Field: "content_classes", Contains: "personal_data"},
 					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_name", Exists: new(false)},
 				},
 			},
 			true,
 			[]string{
 				"content_classes contains personal_data",
 				"file_ext in [xlsx docx pdf]",
+				"file_name does not exist",
 			},
 		},
 		{
@@ -1017,11 +1414,13 @@ func TestCheckIfAnyConditions(t *testing.T) {
 					{Field: "destination_type", Equals: "external"},
 					{Field: "content_classes", Contains: "personal_data"},
 					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_ext", Exists: new(true)},
 				},
 			},
 			true,
 			[]string{
 				"action equals email_send",
+				"file_ext exists",
 			},
 		},
 		{
@@ -1038,6 +1437,7 @@ func TestCheckIfAnyConditions(t *testing.T) {
 					{Field: "destination_type", Equals: "external"},
 					{Field: "content_classes", Contains: "personal_data"},
 					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_name", Exists: new(true)},
 				},
 			},
 			true,
@@ -1059,6 +1459,7 @@ func TestCheckIfAnyConditions(t *testing.T) {
 					{Field: "destination_type", Equals: "external"},
 					{Field: "content_classes", Contains: "personal_data"},
 					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_ext", Exists: new(true)},
 				},
 			},
 			true,
@@ -1067,6 +1468,7 @@ func TestCheckIfAnyConditions(t *testing.T) {
 				"destination_type equals external",
 				"content_classes contains personal_data",
 				"file_ext in [xlsx docx pdf]",
+				"file_ext exists",
 			},
 		},
 		{
@@ -1085,6 +1487,7 @@ func TestCheckIfAnyConditions(t *testing.T) {
 					{Field: "destination_type", Equals: "external"},
 					{Field: "content_classes", Contains: "personal_data"},
 					{Field: "file_ext", In: []string{"xlsx", "docx", "pdf"}},
+					{Field: "file_name", Exists: new(true)},
 				},
 			},
 			false,
