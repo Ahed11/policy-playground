@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -15,8 +16,28 @@ type RunConfig struct {
 	ScenarioPath string
 	PoliciesPath string
 	OutPath      string
-	EventPath    string
-	Report       string
+}
+
+type ExplainConfig struct {
+	ScenarioPath string
+	PoliciesPath string
+	EventID    string
+}
+
+type ExplainData struct {
+	EventID string
+	UserID string
+	Action string
+	Channel string
+	DestinationType string
+	ContentClasses *[]string
+}
+
+type MatchedPolicy struct {
+	PolicyID string
+	Name string
+	Severity string
+	Reasons  []string
 }
 
 func checkThePaths(out string, scenario string, policies string) error {
@@ -78,6 +99,85 @@ func closeAndRemove(file *os.File) error {
 	return errors.Join(closeErr, removeErr)
 }
 
+func outputExplainData(w io.Writer, event policy.Event) error {
+	if _, err := fmt.Fprintf(w, "event_id: %v\n", event.EventID); err != nil {
+		return err
+	}
+
+	if _, err := fmt.Fprintf(w, "user_id: %v\n", event.UserID); err != nil {
+		return err
+	}
+
+	if _, err := fmt.Fprintf(w, "action: %v\n", event.Action); err != nil {
+		return err
+	}
+
+	if _, err := fmt.Fprintf(w, "channel: %v\n", event.Channel); err != nil {
+		return err
+	}
+
+	if _, err := fmt.Fprintf(w,	"destination_type: %v\n", event.DestinationType); err != nil {
+		return err
+	}
+
+	if event.ContentClasses != nil {
+		if _, err := fmt.Fprintf(w, "content_classes: %v\n", *event.ContentClasses); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func outputPolicy(w io.Writer, policy MatchedPolicy) error {
+	if _, err := fmt.Fprintf(w, "- policy_id: %v\n", policy.PolicyID); err != nil {
+		return err
+	}
+
+	if _, err := fmt.Fprintf(w, "  name: %v\n", policy.Name); err != nil {
+		return err
+	}
+
+	if _, err := fmt.Fprintf(w, "  severity: %v\n", policy.Severity); err != nil {
+		return err
+	}
+
+	if _, err := fmt.Fprintln(w, "  reasons:"); err != nil {
+		return err
+	}
+
+	for _, reason := range policy.Reasons {
+		if _, err := fmt.Fprintf(w, "  - %v\n", reason); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func outputExplainResult(w io.Writer, event policy.Event, policies []MatchedPolicy) error {
+	if err := outputExplainData(w, event); err != nil {
+		return err
+	}
+
+	if len(policies) == 0 {
+		_, err := fmt.Fprintln(w, "matched policies: none")
+		return err
+	}
+
+	if _, err := fmt.Fprintln(w, "matched policies:"); err != nil {
+		return err
+	}
+
+	for _, matchedPolicy := range policies {
+		if err := outputPolicy(w, matchedPolicy); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func main() {
 
 	if len(os.Args) < 2 {
@@ -102,24 +202,6 @@ func main() {
 	}
 }
 
-//дописать функцию для explain
-
-func explainCmd(args []string) error {
-	fs := flag.NewFlagSet("explain", flag.ContinueOnError)
-
-	var cfg RunConfig
-
-	fs.StringVar(&cfg.ScenarioPath, "scenario", "", "path to scenario yaml file")
-	fs.StringVar(&cfg.PoliciesPath, "policies", "", "path to policies yaml file")
-	fs.StringVar(&cfg.OutPath, "event", "", "ID of chosen event")
-
-	if err := fs.Parse(args); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func runCmd(args []string) error {
 	fs := flag.NewFlagSet("run", flag.ContinueOnError)
 
@@ -142,6 +224,34 @@ func runCmd(args []string) error {
 	}
 
 	return run(cfg)
+}
+
+func explainCmd(args []string) error {
+	fs := flag.NewFlagSet("explain", flag.ContinueOnError)
+
+	var cfg ExplainConfig
+
+	fs.StringVar(&cfg.ScenarioPath, "scenario", "", "path to scenario yaml file")
+	fs.StringVar(&cfg.PoliciesPath, "policies", "", "path to policies yaml file")
+	fs.StringVar(&cfg.EventID, "event", "", "ID of chosen event")
+
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	if cfg.ScenarioPath == "" {
+		return fmt.Errorf("--scenario is required")
+	}
+
+	if cfg.PoliciesPath == "" {
+		return fmt.Errorf("--policies is required")
+	}
+
+	if cfg.EventID == "" {
+		return fmt.Errorf("--event is required")
+	}
+
+	return explain(cfg)
 }
 
 func run(cfg RunConfig) error {
@@ -171,12 +281,12 @@ func run(cfg RunConfig) error {
 		return err
 	}
 
-	for x := range scenario.Events {
-		for y := range policies.Policies {
-			alert, created, err := policy.CreateAlert(policies.Policies[y], scenario.Events[x])
+	for s := range scenario.Events {
+		for p := range policies.Policies {
+			alert, created, err := policy.CreateAlert(policies.Policies[p], scenario.Events[s])
 
 			if err != nil {
-				mainErr := fmt.Errorf("событие: %v, политика: %v\n%w.", scenario.Events[x].EventID, policies.Policies[y].PolicyID, err)
+				mainErr := fmt.Errorf("событие: %v, политика: %v\n%w.", scenario.Events[s].EventID, policies.Policies[p].PolicyID, err)
 
 				cleanupErr := closeAndRemove(tempAlertFile)
 
@@ -214,4 +324,64 @@ func run(cfg RunConfig) error {
 	}
 
 	return nil
+}
+
+func explain(cfg ExplainConfig) error {
+	
+	
+	scenario, err := policy.ReadScenarioYAML(cfg.ScenarioPath)
+
+	if err != nil {
+		return err
+	}
+
+	policies, err := policy.ReadPoliciesYAML(cfg.PoliciesPath)
+
+	if err != nil {
+		return err
+	}
+
+	var event policy.Event
+	var foundEvent bool
+
+	for i := range scenario.Events {
+		if cfg.EventID == scenario.Events[i].EventID {
+			if foundEvent == false {
+				event = scenario.Events[i]
+				foundEvent = true
+			} else {
+				return fmt.Errorf("два события имеют одинаковый ID")
+			}
+		}
+	}
+
+	if !foundEvent {
+		return fmt.Errorf("событие %v не было найдено", cfg.EventID)
+	}
+
+	var matchedPolicies []MatchedPolicy
+
+	for i := range policies.Policies {
+		alert, created, err := policy.CreateAlert(policies.Policies[i], event)
+
+		if err != nil {
+			return fmt.Errorf("событие: %v, политика: %v\n%w.", event.EventID, policies.Policies[i].PolicyID, err)
+		}
+
+		if created == false {
+				continue
+		}
+
+		matchedPolicies = append(
+			matchedPolicies, 
+			MatchedPolicy{
+				alert.PolicyID,
+				alert.PolicyName,
+				alert.Severity,
+				alert.Reasons,
+			},
+		)
+	}
+
+	return outputExplainResult(os.Stdout, event, matchedPolicies)
 }
